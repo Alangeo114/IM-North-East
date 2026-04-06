@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Карта Дальнего Востока России</title>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<base target="_blank">
+<link rel="stylesheet" type="text/css" href="./Qgis2threejs.css">
+<style type="text/css">
+/* Игровая панель */
+#game-panel {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  width: 260px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  z-index: 1000;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  pointer-events: auto;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+#game-panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+}
+#game-panel button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+#game-panel button:hover {
+  background: #45a049;
+}
+#task-name {
+  font-weight: bold;
+  color: #ffaa00;
+}
+#message {
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+/* Стили для шапки */
+#header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.3); /* полупрозрачный тёмный фон */
+  backdrop-filter: blur(8px);
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  z-index: 1000;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  pointer-events: none; /* чтобы клики проходили сквозь шапку к сцене */
+}
+/* Но ссылки и кнопки внутри должны быть кликабельны */
+#header a, #header button {
+  pointer-events: auto;
+}
+
+/* Левый блок: логотип + название */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.logo {
+  height: 100px;
+  width: auto;
+  filter: drop-shadow(0 0px 0px rgba(0,0,0,0.3));
+}
+.title h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.title p {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* Правый блок: доп. информация */
+.header-right {
+  text-align: right;
+  font-size: 0.9rem;
+}
+.header-right .info-main {
+  font-weight: bold;
+  font-size: 2rem;
+}
+.header-right .info-sub {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+.header-right .highlight {
+  color: #ffd966;
+}
+#popup {
+  top: 130px; /* примерно на 10–20px больше высоты шапки */
+}
+#layerpanel {
+  left: 36px; /* примерно на 10–20px больше высоты шапки */
+  top: auto;
+}
+#header {
+  left: 36px;
+
+}
+</style>
+<script src="./threejs/three.min.js"></script>
+<script src="./threejs/OrbitControls.js"></script>
+<script src="./proj4js/proj4.js"></script>
+<script src="./Qgis2threejs.js"></script>
+</head>
+<body>
+<div id="view">
+  <div id="northarrow"></div>
+  <div id="navigation"></div>
+</div>
+
+
+<!-- popup -->
+<div id="popup">
+  <div id="closebtn">&times;</div>
+  <div id="popupbar"></div>
+  <div id="popupbody">
+    <div id="popupcontent"></div>
+    <!-- query result -->
+    <div id="queryresult">
+      <table id="qr_coords_table">
+        <caption>Clicked coordinates <div id="zoomtopoint" class="action-zoom zoombtn"></div></caption>
+        <tr><td id="qr_coords"> </td> </tr>
+      </table>
+      <table id="qr_layername_table">
+        <caption>Layer <div id="zoomtolayer" class="action-zoom zoombtn"></div></caption>
+        <tr><td id="qr_layername"> </td> </tr>
+      </table>
+      <table id="qr_attrs_table">
+        <caption>Attributes</caption>
+      </table>
+      <div id="orbitbtn" class="action-btn action-orbit">Orbit</div>
+      <div id="measurebtn" class="action-btn">Measure distance</div>
+    </div>
+    <!-- page info -->
+    <div id="pageinfo">
+      <h1>Current View URL</h1>
+      <div><input id="urlbox" type="text"></div>
+      <h1>Usage</h1>
+      <table id="usage">...</table>
+      <h1>About</h1>
+      <div id="about"><img src="./Qgis2threejs.png"> ...</div>
+    </div>
+  </div>
+</div>
+
+<!-- progress bar -->
+<div id="progress"><div id="progressbar"></div></div>
+
+<!-- menu -->
+<div id="toolbtns">
+  <div id="layerbtn"></div>
+  <div id="animbtn" class="hidden"></div>
+  <div id="infobtn"></div>
+</div>
+
+<!-- header and footer -->
+<div id="header">
+  <div class="header-left">
+    <!-- Замените путь на реальный логотип. Можно использовать эмодзи или иконку, если файла нет -->
+    <img class="logo" src="ЭГО.png" alt="Лого кафедры">
+    <div class="title">
+      <h1>СЕВЕРО-ВОСТОК РОССИИ</h1>
+      <p>Цифровая модель рельефа | NASA DEM SRTM</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="info-main">Эколого-географическое <span class="highlight">отделение</span></div>
+    <div class="info-sub">Масштаб 1:2 500 000 | Высота увеличена в 3x</div>
+  </div>
+</div>
+</div>
+<div id="footer">
+  <div style="background: rgba(118, 175, 228, 0.6); padding: 10px 80px; display: inline-block; white-space: nowrap;">
+    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ
+  </div>
+</div>
+
+<!-- layer panel -->
+<div id="layerpanel">
+  <div id="layerlist"></div>
+</div>
+
+<!-- Игровая панель -->
+<div id="game-panel">
+  <h3>🗺️ Географическая игра</h3>
+  <p>Найдите: <strong id="task-name">Загрузка...</strong></p>
+  <p>Попаданий: <span id="score">0</span> / <span id="total">0</span></p>
+  <div id="message"></div>
+  <button id="reset-game">Начать заново</button>
+</div>
+
+<!-- animation -->
+<div id="narrativebox" class="ef1">
+  <div id="narbody">
+
+  </div>
+  <div id="nextbtn"></div>
+</div>
+
+<script>
+Q3D.Config.allVisible = true;
+Q3D.Config.coord.latlon = true;
+Q3D.Config.viewpoint = {lookAt:{x:1331947.163490876,y:7343129.4023456015,z:-2624.3359375},pos:{x:1387945.4177517302,y:6712994.665535068,z:13640.068930972711}};
+Q3D.Config.localMode = true;
+Q3D.Config.northArrow.enabled = true;
+Q3D.Config.northArrow.color = 0xff0000;
+
+var container = document.getElementById("view"),
+    app = Q3D.application,
+    gui = Q3D.gui;
+
+app.init(container);       // initialize viewer
+
+// load the scene
+app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
+  // scene file has been loaded
+  app.start();
+}, function (scene) {
+  // Все файлы загружены, сцена готова (scene — это THREE.Scene)
+
+  // ----- Ограничения камеры -----
+  var controls = app.controls;
+  if (controls) {
+    controls.minDistance = 100000;
+    controls.maxDistance = 4000000;
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI / 2.2;
+    controls.update();
+  }
+
+  // ----- ИГРОВАЯ ЛОГИКА -----
+  // Список объектов (координаты примерные, подберите свои)
+  var quizItems = [
+    { name: "Вулкан Ключевская Сопка", x: 1043192.5653180128, z: 96035.26216951555, radius: 5000 },
+    { name: "Город Магадан", x: 333401.91206796985 , z: 11359.349189623788, radius: 3000 },
+    { name: "Река Колыма (дельта)", x: 340409.03058083734 , z: 7416.171060161105, radius: 10000 },
+    { name: "Чукотское нагорье", x: 963470.5687199165 , z: 97224.80100609222, radius: 15000 },
+    { name: "Река Лена (дельта)", x: -963972.9921353805, z: 6032.631173402219, radius: 8000 },
+    { name: "Хребет Джугджур", x: -375086.40133282973, z: 94572.88782994421, radius: 8000 },
+    { name: "Юкагирское плоскогорье", x: 260209.75017181653 , z: 44761.975019224905, radius: 10000 },
+    { name: "Алазейское плоскогорье", x: -74300.3864410996, z: 39441.02892716427, radius: 8000 },
+    { name: "Алданское плоскогорье", x: -972973.7572671424, z: 110802.59511631682, radius: 15000 },
+    { name: "Командорские острова", x: 1461641.258394292 , z: -41488.482215249904, radius: 20000 },
+    { name: "Полуостров Кони", x: 398626.85859940137 , z: 22575.460720921208, radius: 8000 },
+    { name: "Корякское нагорье", x: 1173448.8663038122 , z: 101047.34408515778, radius: 8000 },
+    { name: "Остров Новая Сибирь", x: -325130.73701074405, z: 4927.410024998957, radius: 20000 },
+    { name: "Хребет Кулар", x: -735818.804173763, z: 29965.729070548943, radius: 15000 },
+    { name: "Город Якутск", x: -847335.2875798825, z: 18416.977005111537, radius: 8000 },
+    { name: "Мыс Лопатка", x: 1046976.4178916197 , z: 6431.727070452043, radius: 8000 },
+    { name: "Тауйская губа", x: 303179.9321416133, z: -3943.6792297377247, radius: 8000 },
+    { name: "Шантарское море", x: -353042.1364399398, z: 7160.747335910575, radius: 10000 }
+  ];
+
+  var currentItemIndex = 0;
+  var score = 0;
+  var totalItems = quizItems.length;
+  var gameActive = true;
+
+  var taskNameSpan = document.getElementById('task-name');
+  var scoreSpan = document.getElementById('score');
+  var totalSpan = document.getElementById('total');
+  var messageDiv = document.getElementById('message');
+
+  function updateUI() {
+    if (taskNameSpan) taskNameSpan.innerText = quizItems[currentItemIndex].name;
+    if (scoreSpan) scoreSpan.innerText = score;
+    if (totalSpan) totalSpan.innerText = totalItems;
+  }
+
+  function checkHit(worldX, worldZ) {
+    if (!gameActive) return;
+    var item = quizItems[currentItemIndex];
+    var dx = worldX - item.x;
+    var dz = worldZ - item.z;
+    var dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist <= item.radius) {
+      score++;
+      if (messageDiv) {
+        messageDiv.innerHTML = "✅ Верно! +1";
+        messageDiv.style.color = "#aaffaa";
+      }
+      currentItemIndex++;
+      if (currentItemIndex < totalItems) {
+        updateUI();
+      } else {
+        gameActive = false;
+        if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все объекты! 🎉";
+        if (taskNameSpan) taskNameSpan.innerText = "Игра завершена";
+      }
+      setTimeout(function() {
+        if (messageDiv && gameActive) messageDiv.innerHTML = "";
+      }, 1500);
+    } else {
+      if (messageDiv) {
+        messageDiv.innerHTML = "❌ Не угадал, попробуй ещё!";
+        messageDiv.style.color = "#ffaaaa";
+      }
+      setTimeout(function() {
+        if (messageDiv && gameActive) messageDiv.innerHTML = "";
+      }, 1000);
+    }
+  }
+
+  function resetGame() {
+    currentItemIndex = 0;
+    score = 0;
+    gameActive = true;
+    updateUI();
+    if (messageDiv) {
+      messageDiv.innerHTML = "Игра начата! Кликайте по карте.";
+      messageDiv.style.color = "#ffaa00";
+    }
+  }
+
+  // ----- НАДЁЖНЫЙ ОБРАБОТЧИК КЛИКОВ (Raycaster) -----
+  var renderer = app.renderer;
+  var camera = app.camera;
+  var raycaster = new THREE.Raycaster();
+
+  function onCanvasClick(event) {
+    var rect = renderer.domElement.getBoundingClientRect();
+    var mouse = new THREE.Vector2();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(scene.children, true);
+    if (intersects.length > 0) {
+      var point = intersects[0].point;
+      console.log("Клик по координатам:", point.x, point.z);
+      checkHit(point.x, point.z);
+    } else {
+      console.log("Клик мимо ландшафта");
+    }
+  }
+
+  renderer.domElement.addEventListener('click', onCanvasClick);
+
+  // Кнопка сброса
+  var resetBtn = document.getElementById('reset-game');
+  if (resetBtn) resetBtn.addEventListener('click', resetGame);
+
+  // Запуск игры
+  resetGame();
+});
+
+// Сдвигаем панель слоёв ниже шапки (эта функция остаётся снаружи)
+function adjustLayerPanelPosition() {
+  var header = document.getElementById('header');
+  var layerPanel = document.getElementById('layerpanel');
+  if (header && layerPanel) {
+    var headerHeight = header.offsetHeight;
+    layerPanel.style.top = headerHeight + 'px';
+  }
+}
+window.addEventListener('load', adjustLayerPanelPosition);
+window.addEventListener('resize', adjustLayerPanelPosition);
+
+
+</script>
+</body>
+</html>
