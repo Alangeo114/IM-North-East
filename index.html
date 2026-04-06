@@ -124,47 +124,77 @@
 
 }
 
-/* Адаптация для мобильных телефонов */
+/* Адаптация для планшетов и телефонов (ширина до 1000px) */
 @media (max-width: 1000px) {
+  /* Шапка */
   #header {
-    padding: 3px 6px;
+    padding: 6px 12px;
+    left: 0 !important; /* убираем сдвиг */
   }
   .logo {
-    height: 10px; /* вместо 100px */
+    height: 40px;
   }
   .title h1 {
-    font-size: 0.8rem; /* вместо 2.1rem */
+    font-size: 1.2rem;
   }
   .title p {
-    font-size: 0.35rem;
-    margin: 1px 0 0;
+    font-size: 0.65rem;
+    margin: 2px 0 0;
   }
   .header-right .info-main {
-    font-size: 0.3rem; /* вместо 2rem */
+    font-size: 1rem;
   }
   .header-right .info-sub {
-    font-size: 0.25rem;
+    font-size: 0.6rem;
   }
   .header-left {
-    gap: 4px;
+    gap: 8px;
   }
+
+  /* Подвал */
   #footer > div {
-    padding: 2.5px 6px;
-    white-space: normal; /* перенос текста на телефоне */
-    font-size: 0.4rem;
+    padding: 5px 12px;
+    white-space: normal;
+    font-size: 0.7rem;
   }
-  /* Сдвигаем игровую панель выше, чтобы не мешать футеру */
+
+  /* Игровая панель — чуть меньше, но не слишком */
   #game-panel {
-    bottom: 60px;
+    bottom: 70px;
     right: 10px;
-    width: 120px;
+    width: 220px;
     padding: 10px;
   }
-  /* Попап тоже сдвигаем */
+  #game-panel h3 {
+    font-size: 1rem;
+  }
+  #game-panel p {
+    font-size: 0.8rem;
+  }
+  #game-panel button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  /* Попап (окно с информацией) — уменьшаем и делаем удобным для телефона */
   #popup {
-    top: 40px;
-    left: 20px;
-    right: 20px;
+    top: 70px;
+    left: 10px;
+    right: 10px;
+    bottom: auto;
+    width: auto;
+    max-width: none;
+  }
+  #popupbody {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  #popupcontent, #queryresult, #pageinfo {
+    font-size: 0.8rem;
+  }
+  .action-btn {
+    font-size: 0.8rem;
+    padding: 4px 8px;
   }
 }
   
@@ -243,7 +273,7 @@
 </div>
 <div id="footer">
   <div style="background: rgba(118, 175, 228, 0.6); padding: 10px 80px; display: inline-block; white-space: nowrap;">
-    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ     версия 0.1.2
+    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ     версия 0.1.3
   </div>
 </div>
 
@@ -346,36 +376,38 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
 }
 
   function checkHit(worldX, worldZ) {
-    if (!gameActive) return;
-    var item = quizItems[currentItemIndex];
-    var dx = worldX - item.x;
-    var dz = worldZ - item.z;
-    var dist = Math.sqrt(dx*dx + dz*dz);
-    if (dist <= item.radius) {
-      score++;
-      if (messageDiv) {
-        messageDiv.innerHTML = "✅ Верно! +1";
-        messageDiv.style.color = "#aaffaa";
-      }
-      currentItemIndex++;
-      if (currentItemIndex >= totalItems) {
-        gameActive = false;
-        if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все объекты! Нажмите «Начать игру», чтобы сыграть ещё раз. 🎉";
-        if (taskNameSpan) taskNameSpan.innerText = "Игра завершена";
-      }
-      setTimeout(function() {
-        if (messageDiv && gameActive) messageDiv.innerHTML = "";
-      }, 1500);
-    } else {
-      if (messageDiv) {
-        messageDiv.innerHTML = "❌ Не угадал, попробуй ещё!";
-        messageDiv.style.color = "#ffaaaa";
-      }
-      setTimeout(function() {
-        if (messageDiv && gameActive) messageDiv.innerHTML = "";
-      }, 1000);
+  if (!gameActive) return;
+  var item = quizItems[currentItemIndex];
+  var dx = worldX - item.x;
+  var dz = worldZ - item.z;
+  var dist = Math.sqrt(dx*dx + dz*dz);
+  if (dist <= item.radius) {
+    score++;
+    if (messageDiv) {
+      messageDiv.innerHTML = "✅ Верно! +1";
+      messageDiv.style.color = "#aaffaa";
     }
+    currentItemIndex++;
+    if (currentItemIndex < totalItems) {
+      updateUI();  // 👈 Этой строки не хватало
+    } else {
+      gameActive = false;
+      updateUI();  // 👈 Обновляем UI, чтобы показать "Игра завершена"
+      if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все объекты! Нажмите «Начать игру», чтобы сыграть ещё раз. 🎉";
+    }
+    setTimeout(function() {
+      if (messageDiv && gameActive) messageDiv.innerHTML = "";
+    }, 1500);
+  } else {
+    if (messageDiv) {
+      messageDiv.innerHTML = "❌ Не угадал, попробуй ещё!";
+      messageDiv.style.color = "#ffaaaa";
+    }
+    setTimeout(function() {
+      if (messageDiv && gameActive) messageDiv.innerHTML = "";
+    }, 1000);
   }
+}
 // функция начала и перезапуска игры
   function startGame() {
   if (gameActive) return; // уже играем, не перезапускаем
