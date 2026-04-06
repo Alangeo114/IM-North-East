@@ -119,6 +119,10 @@
   left: 36px; /* примерно на 10–20px больше высоты шапки */
   top: auto;
 }
+#header {
+  left: 36px;
+
+}
 
 /* Адаптация для мобильных телефонов */
 @media (max-width: 700px) {
@@ -254,7 +258,7 @@
   <p>Найдите: <strong id="task-name">Загрузка...</strong></p>
   <p>Попаданий: <span id="score">0</span> / <span id="total">0</span></p>
   <div id="message"></div>
-  <button id="reset-game">Начать заново</button>
+  <button id="start-game">Начать игру</button>
 </div>
 
 <!-- animation -->
@@ -297,7 +301,7 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
   }
 
   // ----- ИГРОВАЯ ЛОГИКА -----
-  // Список объектов (координаты примерные, подберите свои)
+  // Список объектов (координаты можно брать из консоли)
   var quizItems = [
     { name: "Вулкан Ключевская Сопка", x: 1043192.5653180128, z: 96035.26216951555, radius: 15000 },
     { name: "Город Магадан", x: 333401.91206796985 , z: 11359.349189623788, radius: 13000 },
@@ -322,7 +326,7 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
   var currentItemIndex = 0;
   var score = 0;
   var totalItems = quizItems.length;
-  var gameActive = true;
+  var gameActive = false; //игра не включается сразу
 
   var taskNameSpan = document.getElementById('task-name');
   var scoreSpan = document.getElementById('score');
@@ -330,10 +334,16 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
   var messageDiv = document.getElementById('message');
 
   function updateUI() {
+  if (!gameActive) {
+    if (taskNameSpan) taskNameSpan.innerText = "— Игра не начата —";
+    if (scoreSpan) scoreSpan.innerText = "0";
+    if (totalSpan) totalSpan.innerText = totalItems;
+  } else {
     if (taskNameSpan) taskNameSpan.innerText = quizItems[currentItemIndex].name;
     if (scoreSpan) scoreSpan.innerText = score;
     if (totalSpan) totalSpan.innerText = totalItems;
   }
+}
 
   function checkHit(worldX, worldZ) {
     if (!gameActive) return;
@@ -348,11 +358,9 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
         messageDiv.style.color = "#aaffaa";
       }
       currentItemIndex++;
-      if (currentItemIndex < totalItems) {
-        updateUI();
-      } else {
+      if (currentItemIndex >= totalItems) {
         gameActive = false;
-        if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все объекты! 🎉";
+        if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все объекты! Нажмите «Начать игру», чтобы сыграть ещё раз. 🎉";
         if (taskNameSpan) taskNameSpan.innerText = "Игра завершена";
       }
       setTimeout(function() {
@@ -368,18 +376,29 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
       }, 1000);
     }
   }
-
-  function resetGame() {
-    currentItemIndex = 0;
-    score = 0;
-    gameActive = true;
-    updateUI();
-    if (messageDiv) {
-      messageDiv.innerHTML = "Игра начата! Кликайте по карте.";
-      messageDiv.style.color = "#ffaa00";
-    }
+// функция начала и перезапуска игры
+  function startGame() {
+  if (gameActive) return; // уже играем, не перезапускаем
+  currentItemIndex = 0;
+  score = 0;
+  gameActive = true;
+  updateUI();
+  if (messageDiv) {
+    messageDiv.innerHTML = "Игра начата! Кликайте по карте.";
+    messageDiv.style.color = "#ffaa00";
   }
+}
 
+function resetGame() {
+  currentItemIndex = 0;
+  score = 0;
+  gameActive = false;
+  updateUI();
+  if (messageDiv) {
+    messageDiv.innerHTML = "Нажмите «Начать игру», чтобы начать.";
+    messageDiv.style.color = "#ffaa00";
+  }
+}
   // ----- НАДЁЖНЫЙ ОБРАБОТЧИК КЛИКОВ (Raycaster) -----
   var renderer = app.renderer;
   var camera = app.camera;
@@ -405,8 +424,8 @@ app.loadSceneFile("./data/ОТКРЫТЬ/scene.js", function (scene) {
   renderer.domElement.addEventListener('click', onCanvasClick);
 
   // Кнопка сброса
-  var resetBtn = document.getElementById('reset-game');
-  if (resetBtn) resetBtn.addEventListener('click', resetGame);
+  var startBtn = document.getElementById('start-game');
+if (startBtn) startBtn.addEventListener('click', startGame);
 
   // Запуск игры
   resetGame();
