@@ -7,7 +7,51 @@
 <base target="_blank">
 <link rel="stylesheet" type="text/css" href="./Qgis2threejs.css">
 <style type="text/css">
-/* Игровая панель */
+/* Адаптация для мобильных телефонов */
+@media (max-width: 700px) {
+  #header {
+    padding: 6px 12px;
+  }
+  .logo {
+    height: 40px; /* вместо 100px */
+  }
+  .title h1 {
+    font-size: 1.2rem; /* вместо 2.1rem */
+  }
+  .title p {
+    font-size: 0.65rem;
+    margin: 2px 0 0;
+  }
+  .header-right .info-main {
+    font-size: 0.9rem; /* вместо 2rem */
+  }
+  .header-right .info-sub {
+    font-size: 0.55rem;
+  }
+  .header-left {
+    gap: 8px;
+  }
+  #footer > div {
+    padding: 5px 12px;
+    white-space: normal; /* перенос текста на телефоне */
+    font-size: 0.7rem;
+  }
+  /* Сдвигаем игровую панель выше, чтобы не мешать футеру */
+  #game-panel {
+    bottom: 60px;
+    right: 10px;
+    width: 220px;
+    padding: 10px;
+  }
+  /* Попап тоже сдвигаем */
+  #popup {
+    top: 70px;
+    left: 20px;
+    right: 20px;
+  }
+}
+  
+  /* Игровая панель */
 #game-panel {
   position: absolute;
   bottom: 80px;
