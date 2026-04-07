@@ -253,12 +253,12 @@
   </div>
   <div class="header-right">
     <div class="info-main">Эколого-географическое <span class="highlight">отделение</span></div>
-    <div class="info-sub">Масштаб 1:2 500 000 | Высота увеличена в 3x</div>
+    <div class="info-sub">Институт естественных наук</div>
   </div>
 </div>
 <div id="footer">
   <div style="background: rgba(118, 175, 228, 0.6); padding: 10px 80px; display: inline-block; white-space: nowrap;">
-    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ     версия 0.2.0
+    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ версия 0.2.3
   </div>
 </div>
 
@@ -303,7 +303,7 @@ var container = document.getElementById("view"),
     // Переопределяем метод, который отвечает за настройку near/far
     Q3D.application.adjustCameraNearFar = function() {
         // Вместо автоматического расчёта задаём свои значения
-        this.camera.near = 100.5;
+        this.camera.near = 20.5;
         this.camera.far = 10000000;
         this.camera.updateProjectionMatrix();
         console.log('Camera near/far set to', this.camera.near, this.camera.far);
@@ -357,26 +357,34 @@ app.loadSceneFile("./data/index/scene.js", function (scene) {
 
     // ----- ИГРОВАЯ ЛОГИКА -----
     var quizItems = [
-        { name: "Вулкан Ключевская Сопка", x: 1043192.5653180128, z: 96035.26216951555, radius: 15000 },
-        { name: "Город Магадан", x: 333401.91206796985 , z: 11359.349189623788, radius: 13000 },
-        { name: "Река Колыма (дельта)", x: 340409.03058083734 , z: 7416.171060161105, radius: 30000 },
-        { name: "Чукотское нагорье", x: 963470.5687199165 , z: 97224.80100609222, radius: 35000 },
-        { name: "Река Лена (дельта)", x: -963972.9921353805, z: 6032.631173402219, radius: 30000 },
-        { name: "Хребет Джугджур", x: -375086.40133282973, z: 94572.88782994421, radius: 30000 },
-        { name: "Юкагирское плоскогорье", x: 260209.75017181653 , z: 44761.975019224905, radius: 60000 },
-        { name: "Алазейское плоскогорье", x: -74300.3864410996, z: 39441.02892716427, radius: 20000 },
-        { name: "Алданское плоскогорье", x: -972973.7572671424, z: 110802.59511631682, radius: 60000 },
-        { name: "Командорские острова", x: 1461641.258394292 , z: -41488.482215249904, radius: 100000 },
-        { name: "Полуостров Кони", x: 398626.85859940137 , z: 22575.460720921208, radius: 60000 },
-        { name: "Корякское нагорье", x: 1173448.8663038122 , z: 101047.34408515778, radius: 80000 },
-        { name: "Остров Новая Сибирь", x: -325130.73701074405, z: 4927.410024998957, radius: 60000 },
-        { name: "Хребет Кулар", x: -735818.804173763, z: 29965.729070548943, radius: 35000 },
-        { name: "Город Якутск", x: -847335.2875798825, z: 18416.977005111537, radius: 13000 },
-        { name: "Мыс Лопатка", x: 1046976.4178916197 , z: 6431.727070452043, radius: 18000 },
-        { name: "Тауйская губа", x: 303179.9321416133, z: -3943.6792297377247, radius: 15000 },
-        { name: "Шантарское море", x: -353042.1364399398, z: 7160.747335910575, radius: 30000 }
+        { name: "Вулкан Ключевская Сопка", x: 2424463.0377746616 , z: 138539.92922399138, radius: 15000, type: "mountain" },
+        { name: "Город Магадан", x: 1718338.4204742438 , z: 9694.661561933153, radius: 13000, type: "city" },
+        { name: "Река Колыма (дельта)", x: 1707401.3280179875 , z: 6255.203150836195, radius: 30000, type: "river" },
+        { name: "Чукотское нагорье", x: 2352010.8858735384 , z: 103586.8199689387, radius: 35000, type: "mountain" },
+        { name: "Река Лена (дельта)", x: 415305.3640353673, z: 6679.534879828597, radius: 30000, type: "river" },
+        { name: "Хребет Джугджур", x: 1004375.1652715516, z: 103489.79041881919, radius: 30000, type: "mountain" },
+        { name: "Юкагирское плоскогорье", x: 1643725.352462957 , z: 44415.76542391894, radius: 60000, type: "mountain" },
+        { name: "Алазейское плоскогорье", x: 1310179.3866710553, z: 48117.244763605995, radius: 20000, type: "mountain" },
+        { name: "Алданское плоскогорье", x: 410319.9816767847, z: 110786.34784716598, radius: 60000, type: "mountain" },
+        { name: "Командорские острова", x: 2857309.1683315546 , z: -6931.655475257109, radius: 100000, type: "island" },
+        { name: "Полуостров Кони", x: 1782546.915557297 , z: 39932.89340420241, radius: 60000, type: "island" },
+        { name: "Корякское нагорье", x: 2537935.8408629955 , z: 109533.3197986684, radius: 80000, type: "mountain" },
+        { name: "Остров Новая Сибирь", x: 1059425.5967012593, z: 8602.13143776263, radius: 60000, type: "island" },
+        { name: "Хребет Кулар", x: 653392.1223415682, z: 32502.68589243397, radius: 35000, type: "mountain" },
+        { name: "Город Якутск", x: 538699.1944407042, z: 21288.120196442673, radius: 13000, type: "city" },
+        { name: "Мыс Лопатка", x: 2431168.406109816 , z: 6481.170560331744, radius: 18000, type: "cape" },
+        { name: "Тауйская губа", x: 1679650.8318725664, z: 1493.4010953223387, radius: 15000, type: "sea" },
+        { name: "Шантарское море", x: 1035197.6774469543, z: 4835.370141573564, radius: 30000, type: "sea" }
     ];
 
+    var typeNames = {
+      cape: "мысы",
+      city: "Города",
+      mountain: "Хребты и нагорья",
+      river: "Реки и дельты",
+      sea: "Моря и заливы",
+      island: "Острова и полуострова"
+    };
     var currentItemIndex = 0;
     var score = 0;
     var totalItems = quizItems.length;
@@ -445,6 +453,44 @@ app.loadSceneFile("./data/index/scene.js", function (scene) {
         }
     }
 
+    function fixNaNpositions(obj) {
+    if (obj.isMesh && obj.geometry && obj.geometry.attributes.position) {
+        var posAttr = obj.geometry.attributes.position;
+        var array = posAttr.array;
+        var fixed = false;
+        for (var i = 0; i < array.length; i += 3) {
+            if (isNaN(array[i]) || isNaN(array[i+1]) || isNaN(array[i+2])) {
+                // Заменяем NaN на 0 (или на соседнее валидное значение)
+                if (isNaN(array[i])) array[i] = 0;
+                if (isNaN(array[i+1])) array[i+1] = 0;
+                if (isNaN(array[i+2])) array[i+2] = 0;
+                fixed = true;
+            }
+        }
+        if (fixed) {
+            posAttr.needsUpdate = true;
+            obj.geometry.computeBoundingSphere();
+            console.log("Исправлены NaN в геометрии", obj.name);
+        }
+    }
+    if (obj.children) {
+        obj.children.forEach(child => fixNaNpositions(child));
+    }
+}
+
+// Вызвать после полной загрузки сцены (внутри callback'а app.loadSceneFile)
+setTimeout(function() {
+    fixNaNpositions(scene);
+    // Принудительно пересоздаём bounding spheres для всей сцены
+    scene.traverse(function(obj) {
+        if (obj.geometry && obj.geometry.computeBoundingSphere) {
+            try {
+                obj.geometry.computeBoundingSphere();
+            } catch(e) { console.warn(e); }
+        }
+    });
+    app.render();
+}, 1000);
     function resetGame() {
         currentItemIndex = 0;
         score = 0;
