@@ -258,7 +258,7 @@
 </div>
 <div id="footer">
   <div style="background: rgba(118, 175, 228, 0.6); padding: 10px 80px; display: inline-block; white-space: nowrap;">
-    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ версия 0.2.3
+    © 2026 Данные: NASA DEM SRTM | Сделано в QGIS студентом ИЕН СВФУ версия 0.3.0
   </div>
 </div>
 
@@ -272,6 +272,25 @@
   <h3>🗺️ Географическая игра</h3>
   <p>Найдите: <strong id="task-name">Загрузка...</strong></p>
   <p>Попаданий: <span id="score">0</span> / <span id="total">0</span></p>
+  
+  <!-- Блок выбора типов объектов -->
+  <div style="margin-top: 10px;">
+    <label style="font-size: 0.8rem;">Типы объектов:</label>
+    <div id="type-filters" style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">
+      <label><input type="checkbox" value="mountain" checked> Хребты/нагорья</label>
+      <label><input type="checkbox" value="city"> Города</label>
+      <label><input type="checkbox" value="river"> Реки/дельты</label>
+      <label><input type="checkbox" value="island"> Острова/полуострова</label>
+      <label><input type="checkbox" value="sea"> Моря/заливы</label>
+      <label><input type="checkbox" value="cape"> Мысы</label>
+    </div>
+  </div>
+
+  <!-- Ползунок выбора количества -->
+   <div style="margin-top: 10px;">
+    <label style="font-size: 0.8rem;">Количество объектов: <span id="count-value">5</span></label>
+    <input type="range" id="object-count" min="1" max="30" value="5" style="width: 100%; margin-top: 4px;">
+  </div>
   <div id="message"></div>
   <button id="start-game">Начать игру</button>
 </div>
@@ -342,6 +361,9 @@ app.init(container);
 app.loadSceneFile("./data/index/scene.js", function (scene) {
     // scene file has been loaded
     app.start();
+
+
+
 }, function (scene) {
     // Все файлы загружены, сцена готова
 
@@ -355,8 +377,12 @@ app.loadSceneFile("./data/index/scene.js", function (scene) {
         controls.update();
     }
 
+    var currentSequence = [];        // текущая последовательность объектов для игры
+    var selectedTypes = ["mountain"]; // по умолчанию хребты
+    var requiredCount = 5;           // количество объектов в последовательности
+
     // ----- ИГРОВАЯ ЛОГИКА -----
-    var quizItems = [
+    var originalQuizItems = [
         { name: "Вулкан Ключевская Сопка", x: 2424463.0377746616 , z: 138539.92922399138, radius: 15000, type: "mountain" },
         { name: "Город Магадан", x: 1718338.4204742438 , z: 9694.661561933153, radius: 13000, type: "city" },
         { name: "Река Колыма (дельта)", x: 1707401.3280179875 , z: 6255.203150836195, radius: 30000, type: "river" },
@@ -387,7 +413,7 @@ app.loadSceneFile("./data/index/scene.js", function (scene) {
     };
     var currentItemIndex = 0;
     var score = 0;
-    var totalItems = quizItems.length;
+    var totalItems = originalQuizItems.length;
     var gameActive = false;
 
     var taskNameSpan = document.getElementById('task-name');
@@ -395,63 +421,190 @@ app.loadSceneFile("./data/index/scene.js", function (scene) {
     var totalSpan = document.getElementById('total');
     var messageDiv = document.getElementById('message');
 
-    function updateUI() {
-        if (!gameActive) {
-            if (taskNameSpan) taskNameSpan.innerText = "— Игра не начата —";
-            if (scoreSpan) scoreSpan.innerText = "0";
-            if (totalSpan) totalSpan.innerText = totalItems;
-        } else {
-            if (taskNameSpan) taskNameSpan.innerText = quizItems[currentItemIndex].name;
-            if (scoreSpan) scoreSpan.innerText = score;
-            if (totalSpan) totalSpan.innerText = totalItems;
+    // Получить выбранные типы из чекбоксов
+function getSelectedTypes() {
+    var checkboxes = document.querySelectorAll('#type-filters input[type="checkbox"]');
+    var types = [];
+    checkboxes.forEach(function(cb) {
+        if (cb.checked) types.push(cb.value);
+    });
+    return types;
+}
+
+// Получить значение ползунка
+function getRequiredCount() {
+    var slider = document.getElementById('object-count');
+    return slider ? parseInt(slider.value, 10) : 5;
+}
+
+// Отфильтровать массив объектов по выбранным типам
+function filterItemsByTypes(items, types) {
+    if (!types.length) return [];
+    return items.filter(function(item) {
+        return types.indexOf(item.type) !== -1;
+    });
+}
+
+// Сгенерировать последовательность нужной длины из исходного массива (с повторениями при необходимости)
+function generateRandomSequence(filteredItems, count) {
+    if (!filteredItems.length) return [];
+    if (filteredItems.length === 1) {
+        // если всего один объект, просто повторяем его count раз
+        return Array(count).fill(filteredItems[0]);
+    }
+    
+    var result = [];
+    if (count <= filteredItems.length) {
+        // Берём случайные уникальные элементы (перемешиваем и отрезаем)
+        var shuffled = shuffleArray(filteredItems.slice());
+        result = shuffled.slice(0, count);
+    } else {
+        // Нужно больше, чем есть уникальных – делаем с повторениями
+        // Способ: на каждый индекс выбираем случайный элемент из filteredItems
+        for (var i = 0; i < count; i++) {
+            var randomIndex = Math.floor(Math.random() * filteredItems.length);
+            result.push(filteredItems[randomIndex]);
         }
     }
+    return result;
+}
+
+// Вспомогательная функция перемешивания массива (алгоритм Фишера-Йетса)
+function shuffleArray(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+    return arr;
+}
+
+// Обновить игровую последовательность на основе текущих настроек
+function updateGameSequence() {
+    var types = getSelectedTypes();
+    var count = getRequiredCount();
+    var filtered = filterItemsByTypes(originalQuizItems, types);
+    if (filtered.length === 0) {
+        console.warn("Нет объектов выбранных типов");
+        currentSequence = [];
+        return;
+    }
+    currentSequence = generateRandomSequence(filtered, count);
+}
+    
+    function updateUI() {
+    if (!gameActive) {
+        if (taskNameSpan) taskNameSpan.innerText = "— Игра не начата —";
+        if (scoreSpan) scoreSpan.innerText = "0";
+        if (totalSpan) totalSpan.innerText = currentSequence.length;
+    } else {
+        if (currentItemIndex < currentSequence.length) {
+            if (taskNameSpan) taskNameSpan.innerText = currentSequence[currentItemIndex].name;
+        } else {
+            if (taskNameSpan) taskNameSpan.innerText = "— Игра завершена —";
+        }
+        if (scoreSpan) scoreSpan.innerText = score;
+        if (totalSpan) totalSpan.innerText = currentSequence.length;
+    }
+}
 
     function checkHit(worldX, worldZ) {
-        if (!gameActive) return;
-        var item = quizItems[currentItemIndex];
-        var dx = worldX - item.x;
-        var dz = worldZ - item.z;
-        var dist = Math.sqrt(dx*dx + dz*dz);
-        if (dist <= item.radius) {
-            score++;
-            if (messageDiv) {
-                messageDiv.innerHTML = "✅ Верно! +1";
-                messageDiv.style.color = "#aaffaa";
-            }
-            currentItemIndex++;
-            if (currentItemIndex < totalItems) {
-                updateUI();
-            } else {
-                gameActive = false;
-                updateUI();
-                if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все объекты! Нажмите «Начать игру», чтобы сыграть ещё раз. 🎉";
-            }
-            setTimeout(function() {
-                if (messageDiv && gameActive) messageDiv.innerHTML = "";
-            }, 1500);
-        } else {
-            if (messageDiv) {
-                messageDiv.innerHTML = "❌ Не угадал, попробуй ещё!";
-                messageDiv.style.color = "#ffaaaa";
-            }
-            setTimeout(function() {
-                if (messageDiv && gameActive) messageDiv.innerHTML = "";
-            }, 1000);
+    if (!gameActive) return;
+    if (currentItemIndex >= currentSequence.length) return;
+    var item = currentSequence[currentItemIndex];
+    var dx = worldX - item.x;
+    var dz = worldZ - item.z;
+    var dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist <= item.radius) {
+        score++;
+        if (messageDiv) {
+            messageDiv.innerHTML = "✅ Верно! +1";
+            messageDiv.style.color = "#aaffaa";
         }
+        currentItemIndex++;
+        if (currentItemIndex < currentSequence.length) {
+            updateUI();
+        } else {
+            gameActive = false;
+            updateUI();
+            if (messageDiv) messageDiv.innerHTML = "🎉 Поздравляем! Вы нашли все заданные объекты! Нажмите «Начать игру», чтобы сыграть ещё раз. 🎉";
+        }
+        setTimeout(function() {
+            if (messageDiv && gameActive) messageDiv.innerHTML = "";
+        }, 1500);
+    } else {
+        if (messageDiv) {
+            messageDiv.innerHTML = "❌ Не угадал, попробуй ещё!";
+            messageDiv.style.color = "#ffaaaa";
+        }
+        setTimeout(function() {
+            if (messageDiv && gameActive) messageDiv.innerHTML = "";
+        }, 1000);
     }
+}
 
     function startGame() {
-        if (gameActive) return;
-        currentItemIndex = 0;
-        score = 0;
-        gameActive = true;
-        updateUI();
+    if (gameActive) return;
+    
+    // Получаем актуальные настройки
+    var types = getSelectedTypes();
+    var count = getRequiredCount();
+    
+    if (types.length === 0) {
         if (messageDiv) {
-            messageDiv.innerHTML = "Игра начата! Кликайте по карте.";
+            messageDiv.innerHTML = "⚠️ Выберите хотя бы один тип объектов!";
             messageDiv.style.color = "#ffaa00";
         }
+        return;
     }
+    
+    var filtered = filterItemsByTypes(originalQuizItems, types);
+    if (filtered.length === 0) {
+        if (messageDiv) {
+            messageDiv.innerHTML = "⚠️ Для выбранных типов нет объектов в списке.";
+            messageDiv.style.color = "#ffaa00";
+        }
+        return;
+    }
+    
+    // Генерируем новую последовательность
+    currentSequence = generateRandomSequence(filtered, count);
+    if (currentSequence.length === 0) {
+        if (messageDiv) messageDiv.innerHTML = "Ошибка: не удалось создать последовательность.";
+        return;
+    }
+    
+    currentItemIndex = 0;
+    score = 0;
+    gameActive = true;
+    updateUI();
+    if (messageDiv) {
+        messageDiv.innerHTML = "Игра начата! Кликайте по карте, чтобы найти объекты по порядку.";
+        messageDiv.style.color = "#ffaa00";
+    }
+}
+
+function onSettingsChange() {
+    var count = getRequiredCount();
+    document.getElementById('count-value').innerText = count;
+    
+    if (!gameActive) {
+        var types = getSelectedTypes();
+        var filtered = filterItemsByTypes(originalQuizItems, types);
+        var possibleCount = filtered.length;
+        // Обновляем totalSpan, показывая максимальное возможное количество (без повторений)
+        if (totalSpan) totalSpan.innerText = possibleCount;
+        // Можно также предварительно сгенерировать последовательность для предпросмотра, но не обязательно
+        if (messageDiv && types.length === 0) {
+            messageDiv.innerHTML = "Выберите типы объектов для игры.";
+        } else if (possibleCount === 0 && types.length > 0) {
+            messageDiv.innerHTML = "Нет объектов выбранных типов.";
+        } else if (types.length > 0) {
+            messageDiv.innerHTML = "Готово. Нажмите «Начать игру».";
+        }
+    }
+}
 
     function fixNaNpositions(obj) {
     if (obj.isMesh && obj.geometry && obj.geometry.attributes.position) {
@@ -529,6 +682,20 @@ setTimeout(function() {
     var startBtn = document.getElementById('start-game');
     if (startBtn) startBtn.addEventListener('click', startGame);
 
+    onSettingsChange();
+    // Привязка изменения настроек
+var typeCheckboxes = document.querySelectorAll('#type-filters input[type="checkbox"]');
+typeCheckboxes.forEach(function(cb) {
+    cb.addEventListener('change', onSettingsChange);
+});
+
+var countSlider = document.getElementById('object-count');
+if (countSlider) {
+    countSlider.addEventListener('input', function() {
+        document.getElementById('count-value').innerText = this.value;
+        onSettingsChange();
+    });
+}
     resetGame();
 });
 
